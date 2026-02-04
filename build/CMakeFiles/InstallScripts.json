@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/clannfear/development/projects/game_engine/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

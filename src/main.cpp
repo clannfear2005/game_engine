@@ -1,36 +1,53 @@
-#include "game.hpp"
+#include "glad/gl.h"
+#include "imguihandler.h"
+#include "sdl_handler.hpp"
+#include <SDL.h>
+#include <stdexcept>
 
-Game* game = nullptr;
+int main() {
 
-int main(int argc, const char* argv[])
-{
-    const int FPS = 60;
-    const int frameDelay = 1000 / FPS; // Max time we have between frames
+    // SDL Initialisation
+    SDLHandler sdl_handler;
+    sdl_handler.init("NEAT Experiment", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 800, false);
 
-    Uint32 frameStart;
-    int frameTime;
-
-    game = new Game();
-
-    game->init("Grass Cutting Sim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 800, false);
-
-    while (game->running())
-    {
-        frameStart = SDL_GetTicks();
-
-        game->handleEvents();
-        game->update();
-        game->render();
-
-        frameTime = SDL_GetTicks() - frameStart;
-
-        if (frameDelay > frameTime)
-        {
-            SDL_Delay(frameDelay-frameTime); // Limiting frame rate to reduce laginess from fps jumping
-        }
+    // Load GL function pointers (GLAD) after a current context exists
+    if ( gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress) == 0 ) {
+        throw std::runtime_error("Failed to load OpenGL with glad");
     }
 
-    game->clean();
+    // Enable vsync
+    SDL_GL_SetSwapInterval(1);
+
+    // ImGui Initialisation
+    ImGuiHandler imguihandler;
+    imguihandler.Init(sdl_handler.getWindow(), sdl_handler.getGLContext(), "#version 330 core");
+
+    bool first_update = true; // Flag for first ImGui update().
+
+    // Main loop
+    while (sdl_handler.running()) {
+
+        sdl_handler.handle_events(); // Listen for user events to interrupt loop when window is exited.
+
+        imguihandler.NewFrame();
+        imguihandler.Update(first_update);
+        first_update = false;
+
+        // Handling screen before rendering - should make cleaner.
+        int screen_w, screen_h;
+        SDL_GetWindowSize(sdl_handler.getWindow(), &screen_w, &screen_h);
+        glViewport(0, 0, screen_w, screen_h);
+        glClear(GL_COLOR_BUFFER_BIT); // Clearing screen to remove 'ghosting'
+
+
+        imguihandler.Render();
+
+        SDL_GL_SwapWindow(sdl_handler.getWindow());
+    }
+
+    // Clean up
+    imguihandler.Shutdown();
+    sdl_handler.clean();
 
     return 0;
 }
